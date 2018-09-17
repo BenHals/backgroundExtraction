@@ -11,19 +11,19 @@ import os
 
 # Extract and set command line arguments for parameters
 parser = argparse.ArgumentParser()
-parser.add_argument("--blocksize", type=int, help="enter some quality limit",
-                    nargs='?', default=10)
+parser.add_argument("--blocksize", type=float, help="enter some quality limit",
+                    nargs='?', default=0.035)
 parser.add_argument("--multi", type=float, help="enter some quality limit",
-                    nargs='?', default=1.9)
+                    nargs='?', default=1.95)
 parser.add_argument("--texthresh", type=float, help="enter some quality limit",
                     nargs='?', default=0.1)
 parser.add_argument("--colthresh", type=float, help="enter some quality limit",
-                    nargs='?', default=0.5)
+                    nargs='?', default=0.4)
 parser.add_argument("--file", help="enter some quality limit",
                     nargs='?', default='miro')
 parser.add_argument("--detail", help="enter some quality limit", action='store_true', default=False)
 args = parser.parse_args()
-BLOCK_SIZE = args.blocksize
+BLOCK_SIZE = args.blocksize 
 COLTHRESH = args.colthresh
 TEXTHRESH = args.texthresh
 FILE = args.file
@@ -42,6 +42,8 @@ img_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2HSV)
 img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 h,w,chn = img.shape
 mask_f = np.zeros((h+2,w+2),np.uint8)
+
+BLOCK_SIZE = int(w * BLOCK_SIZE)
 
 print("w: {0}, h: {1}".format(w, h))
 # Number of blocks which fit within image width/height, with margins at edge
@@ -130,12 +132,14 @@ for a in windows:
     a[1][0] = ((a[1][0] - dis_min) / (dis_max - dis_min))
     a[1][1] = ((a[1][1] - con_min) / (con_max - con_min))
     a[1][2] = ((a[1][2] - cor_min) / (cor_max - cor_min))
+    
 
 # Compares windows to all other windows, if similar add to the same bin
 for ia,a in enumerate(windows):            
     bin_id = len(bins)
     texture = np.array(a[1])
     hist = a[2]
+    
     for b in windows[:ia]:
         if a == b:
             continue
@@ -148,8 +152,9 @@ for ia,a in enumerate(windows):
             break
     if bin_id == len(bins):
         bins.append([])
-    bins[bin_id].append([block_id, texture, hist, window, bin_id, a[5]])
     a[4] = bin_id
+    bins[bin_id].append(a)
+    
         
 
 # Draw bins onto image in different hues
@@ -292,33 +297,42 @@ av_c2_std = av_c2_std / len(bins[0])
 av_c3_std = av_c3_std / len(bins[0])
 
 
+std_multi = (1 + (1 - ((BLOCK_SIZE * 21)/ img_bigger.shape[1]))) * MULTI
 for c_1_m in range(10, 11):
-    for c_2_m in range(6, 7):  
-        for c_3_m in range(8, 9):
+    for c_2_m in range(8, 9):  
+        for c_3_m in range(9, 10):
             mask = np.zeros((img_bigger.shape[0]+2, img_bigger.shape[1]+2),np.uint8)
+            mask[0:top, :] = 255
+            mask[:, 0:left] = 255
+            if(bottom > 0):
+                mask[-bottom:, :] = 255
+            if right > 0 :
+                mask[:, -right:] = 255
             for curr_bin in bins[0]:
                 l,t,r,b = curr_bin[5]
                 point = (int((l+r)/2), int((t+b)/2))
                 c1 = curr_bin[3][..., 0]
                 c2 = curr_bin[3][..., 1]
                 c3 = curr_bin[3][..., 2]
-                std_multi = MULTI
                 c1_std = np.std(c1)
                 c2_std = np.std(c2)
                 c3_std = np.std(c3)
 
                 # We weight this windows standard deviation with total
-                c1_std = (av_c1_std + c1_std * 2) / 3
-                c2_std = (av_c2_std + c2_std * 2) / 3
-                c3_std = (av_c3_std + c3_std * 2) / 3
+                c1_std = (av_c1_std * 2 + c1_std ) / 3
+                c2_std = (av_c2_std * 2 + c2_std) / 3
+                c3_std = (av_c3_std * 2 + c3_std) / 3
+                # c1_std = (av_c1_std)
+                # c2_std = (av_c2_std)
+                # c3_std = (av_c3_std)
 
                 # Each channel gets an empirically calced multiplyer
-                c1_thresh = MULTI * c_1_m / 10
-                c2_thresh = MULTI * c_2_m / 10
-                c3_thresh = MULTI * c_3_m / 10
-
+                c1_thresh = std_multi * c_1_m / 10
+                c2_thresh = std_multi * c_2_m / 10
+                c3_thresh = std_multi * c_3_m / 10
+                print(std_multi)
                 # Floodfill sets mask to 255 where background is
-                cv2.floodFill(img_bigger ,mask, point, 255, (c1_std * c1_thresh, c2_std * c2_thresh, c3_std * c3_thresh), (np.std(c1) * c1_thresh, c2_std * c2_thresh, c3_std * c3_thresh), floodflags)     # line 27
+                cv2.floodFill(img_bigger ,mask, point, 255, (c1_std * c1_thresh, c2_std * c2_thresh, c3_std * c3_thresh), (c1_std * c1_thresh, c2_std * c2_thresh, c3_std * c3_thresh), floodflags)     # line 27
                 if DETAIL:
                     img_show_rect = img_rect.copy()
                     cv2.rectangle(img_show_rect, (l, t), (r, b), (50, 255, 255), 1)
@@ -330,6 +344,8 @@ for c_1_m in range(10, 11):
                     cv2.imshow('rect', cv2.cvtColor(img_show_rect, cv2.COLOR_HSV2BGR))
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
+                cv2.line(img_rect,(point[0] - 5,point[1]),(point[0] + 5,point[1]),(255,0,0),1)
+                cv2.line(img_rect,(point[0],point[1] - 5),(point[0],point[1] + 5),(255,0,0),1)
             
             # Mask is 0 for foreground, 1 in background
             mask2 = np.where((mask==0), 0, 1).astype('uint8')
@@ -339,12 +355,14 @@ for c_1_m in range(10, 11):
             kernel = np.ones((5,5),np.uint8)
             kernel3 = np.ones((3,3),np.uint8)
                 
-            opening = cv2.morphologyEx(mask2, cv2.MORPH_OPEN, kernel)
+            opening = mask2
+            #opening = cv2.morphologyEx(mask2, cv2.MORPH_OPEN, kernel)
             opening = cv2.dilate(opening,kernel3,iterations = 1)
+            opening = cv2.dilate(opening,kernel3,iterations = 1)
+            opening = cv2.erode(opening,kernel3,iterations = 1)
+            #opening = cv2.dilate(opening,kernel3,iterations = 1)
 
-            print(mask2.shape)
-            print(img_bigger.shape)
-
+            mask_inv = np.where((opening==1), 0, 1).astype('uint8')
             # Final comp is the components
             final = img_bigger*opening[1:-1,1:-1,np.newaxis]
             final_comp = img_bigger*mask_inv[1:-1,1:-1,np.newaxis]
@@ -355,8 +373,9 @@ for c_1_m in range(10, 11):
             final_comp = background + final_comp
             cv2.imwrite('{0}//test3-{1}-{2}-{3}.png'.format(o_dir, c_1_m, c_2_m, c_3_m),cv2.cvtColor(final_comp, cv2.COLOR_HSV2BGR))
 
+
 # Get contours of the mask
-im2, contours, hierarchy = cv2.findContours(mask2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+im2, contours, hierarchy = cv2.findContours(opening, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 # Simplify these and cull small objects
 approxes = []
@@ -385,9 +404,7 @@ for i,a in enumerate(approxes):
     blank[:, :] = (180, 0, 255)
     approxed_comp = blank*approxed_mask_inv[1:-1,1:-1,np.newaxis] + final_a
     x,y,w,h = cv2.boundingRect(approxed_mask)
-    print("width {0}, height {1}".format(w, h))
     scaling_factor = math.floor(min(re_x/w, re_y/h) * 100)/100
-    print("sfw: {0}, sfh: {1}, sf {2}".format(re_x/w, re_y/h, scaling_factor))
     resized =cv2.resize(approxed_comp[y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
     resized_x = resized.shape[1]
     resized_y = resized.shape[0]
@@ -395,9 +412,6 @@ for i,a in enumerate(approxes):
     blank_64[:, :] = (180, 0, 255)
     x_offset = (re_x - resized_x)/2
     y_offset = (re_y - resized_y)/2
-    print("xoff: {0}, yoff: {1}".format(x_offset, y_offset))
-    print("rw: {0}, rh: {1}".format(resized_x, resized_y))
-    print("{0}:{1}, {2}:{3}".format(math.floor(y_offset),math.floor(y_offset)+resized_y, math.floor(x_offset),math.floor(x_offset)+resized_x))
     blank_64[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = resized
     cv2.rectangle(img_contour_indi,(x,y),(x+w,y+h),(75,160,255),2)
     if cv2.arcLength(a,True) > 5:
