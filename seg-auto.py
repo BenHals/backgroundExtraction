@@ -246,15 +246,25 @@ if DETAIL:
     cv2.destroyAllWindows()
 
 # We select the largest bin as the background
-#Here we draw these windows
-img_rect = img_bigger.copy()
+# Here we draw these windows and save them
 bins.sort(key=len, reverse=True)
-for curr_bin in bins[0]:
+img_rect = img_bigger.copy()
+windows_img = np.zeros((BLOCK_SIZE, len(bins[0])*BLOCK_SIZE, 3), np.uint8)
+print(windows_img.shape)
+
+for icb,curr_bin in enumerate(bins[0]):
     l,t,r,b = curr_bin[5]
     cv2.rectangle(img_rect, (l, t), (r, b), (100, 255, 255), 1)
     b = curr_bin[3][..., 1]
     g = curr_bin[3][..., 1]
     r = curr_bin[3][..., 2]
+    print("{0}:{1}".format(icb*BLOCK_SIZE, (icb+1)*BLOCK_SIZE))
+    print(windows_img[:, icb*BLOCK_SIZE:(icb+1)*BLOCK_SIZE].shape)
+    print(curr_bin[3].shape)
+    windows_img[:, icb*BLOCK_SIZE:(icb+1)*BLOCK_SIZE] = curr_bin[3]
+
+cv2.imwrite("{0}background_windows.png".format(o_dir), cv2.cvtColor(windows_img, cv2.COLOR_HSV2BGR))
+
 
 if DETAIL:
     cv2.imshow('image',cv2.cvtColor(img_orig, cv2.COLOR_HSV2BGR))
