@@ -389,8 +389,10 @@ im2, contours, hierarchy = cv2.findContours(opening, cv2.RETR_TREE, cv2.CHAIN_AP
 
 # Simplify these and cull small objects
 approxes = []
+max_area = img_bigger.shape[0] * img_bigger.shape[1]
 for c in contours:
-    if cv2.arcLength(c,True) > 50:
+    cx,cy,cw,ch = cv2.boundingRect(c)
+    if cv2.arcLength(c,True) > 50 and cv2.contourArea(c) < 0.75 * max_area:
         epsilon = 2
         approx = cv2.approxPolyDP(c,epsilon,True)
         approxes.append(approx)
@@ -401,6 +403,7 @@ img_contour_indi = img_bigger.copy()
 
 re_x = 250
 re_y = 250
+
 for i,a in enumerate(approxes):
     img_contour_indi = img_bigger.copy()
     cnt = a
@@ -426,7 +429,7 @@ for i,a in enumerate(approxes):
     cv2.rectangle(img_contour_indi,(x,y),(x+w,y+h),(75,160,255),2)
     if cv2.arcLength(a,True) > 5:
 
-        cv2.imwrite('{0}conponent-{1}.png'.format(o_dir, i), cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
+        cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}.png'.format(o_dir, i, w, h, scaling_factor), cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
         if DETAIL:
             cv2.imshow('con-approx', cv2.cvtColor(img_contour_indi, cv2.COLOR_HSV2BGR))
             cv2.imshow('components', cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
