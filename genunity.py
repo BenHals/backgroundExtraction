@@ -12,7 +12,16 @@ import random
 from os import listdir
 from os.path import isfile, join
 import shutil
-
+import re
+def atoi(text):
+    return int(text) if text.isdigit() else text
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+    '''
+    return [ atoi(c) for c in re.split('(\d+)', text) ]
 def make_cube(l):
     output_str = ""
     verts = [   (0, 0, 0),
@@ -43,6 +52,287 @@ def make_cube(l):
     for i,f in enumerate(faces):
         output_str += "f {0} {1} {2}\n".format(f[0], f[1], f[2])
     return output_str
+
+def makeOBJ(guid):
+
+    ret_str = """
+    fileFormatVersion: 2
+guid: """ + str(guid) + """
+ModelImporter:
+  serializedVersion: 23
+  fileIDToRecycleName:
+    100000: //RootNode
+    100002: default
+    400000: //RootNode
+    400002: default
+    2100000: defaultMat
+    2300000: default
+    3300000: default
+    4300000: default
+    2186277476908879412: ImportLogs
+  externalObjects: {}
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    previousCalculatedGlobalScale: 1
+    hasPreviousCalculatedGlobalScale: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 0
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+"""
+    return ret_str
+
+def makeOBJTexMeta(guid):
+    return """fileFormatVersion: 2
+guid: """+str(guid)+"""
+TextureImporter:
+  fileIDToRecycleName: {}
+  externalObjects: {}
+  serializedVersion: 7
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 1
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: -1
+    aniso: -1
+    mipBias: -100
+    wrapU: -1
+    wrapV: -1
+    wrapW: -1
+  nPOTScale: 1
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 0
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  spriteTessellationDetail: -1
+  textureType: 0
+  textureShape: 1
+  singleChannelComponent: 0
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  platformSettings:
+  - serializedVersion: 2
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    androidETC2FallbackOverride: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+  spritePackingTag: 
+  pSDRemoveMatte: 0
+  pSDShowRemoveMatteOption: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: """
+
+def makeOBJTexMat(texGuid):
+    return """%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_Name: New Material
+  m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: """+str(texGuid)+""", type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _BumpScale: 1
+    - _Cutoff: 0.5
+    - _DetailNormalMapScale: 1
+    - _DstBlend: 0
+    - _GlossMapScale: 1
+    - _Glossiness: 0.5
+    - _GlossyReflections: 1
+    - _Metallic: 0
+    - _Mode: 0
+    - _OcclusionStrength: 1
+    - _Parallax: 0.02
+    - _SmoothnessTextureChannel: 0
+    - _SpecularHighlights: 1
+    - _SrcBlend: 1
+    - _UVSec: 0
+    - _ZWrite: 1
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}"""
+
+def makeOBJTexMatMeta(guid):
+    return """fileFormatVersion: 2
+guid: """+str(guid)+"""
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: """
 
 def makeScript():
     return """using UnityEditor;
@@ -361,7 +651,56 @@ TextureImporter:
   assetBundleName: 
   assetBundleVariant: 
 """
-def makeScene():
+def makeScene(guids, locals, positions, tex_mat_guids):
+    obj_str = """"""
+    for i,guid in enumerate(guids):
+        obj_str += """--- !u!1001 &"""+str(locals[i])+"""
+Prefab:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalPosition.x
+      value: """+str(positions[i][0])+"""
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalPosition.y
+      value: """+str(positions[i][1])+"""
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalPosition.z
+      value: """+str(positions[i][2])+"""
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_RootOrder
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2300000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value:
+      objectReference: {fileID: 2100000, guid: """+str(tex_mat_guids[i])+""", type: 2} 
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: """+str(guid)+""", type: 3}
+  m_IsPrefabAsset: 0  
+"""
     output_str = """%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!29 &1
@@ -541,7 +880,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 1
+  m_RootOrder: """+str(len(guids)+1)+"""
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
 --- !u!1 &534669902
 GameObject:
@@ -631,7 +970,8 @@ m_Enabled: 1
 m_EditorHideFlags: 0
 m_Script: {fileID: 11500000, guid: 6086cc5d7ec535d4eb429a38890ac012, type: 3}
 m_Name:
-m_EditorClassIdentifier:"""
+m_EditorClassIdentifier:
+"""+obj_str
 
     return output_str
 
@@ -666,8 +1006,45 @@ def gen_unity(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI, SBSIZE, UNI
     with open("{0}FlyCamera.cs.meta".format(o_dir_Assets), 'w+') as f:
         f.write(makeFlyCamMeta())
     shutil.copyfile("{0}bg-synth.png".format(o_dir), "{0}bg-synth.png".format(o_dir_Assets))
+
+    base_obj_guid = 55555555555555555555555555555550
+    base_obj_tex_guid = 44444444444444444444444444444440
+    base_obj_tex_mat_guid = 33333333333333333333333333333330
+    base_obj_local_id = 5555555550
+    obj_guids_used = []
+    obj_tex_guids_used = []
+    obj_tex_mat_guids_used = []
+    obj_local_ids_used = []
+    obj_positions = []
+    obj_files = [f for f in listdir(o_dir) if isfile(join(o_dir, f)) and 'component' in f and 'obj' in f]
+    obj_files.sort(key=natural_keys)
+    obj_tex_files = [f for f in listdir(o_dir) if isfile(join(o_dir, f)) and 'conponent' in f and 'tex.png' in f]
+    obj_tex_files.sort(key=natural_keys)
+    print(obj_tex_files)
+    for oi in range(0, len(obj_files)):
+        obj_guid = base_obj_guid + oi
+        obj_local_id = base_obj_local_id + oi
+        obj_tex_guid = base_obj_tex_guid + oi
+        obj_tex_mat_guid = base_obj_tex_mat_guid + oi
+        shutil.copyfile("{0}component-{1}.obj".format(o_dir, oi), "{0}component-{1}.obj".format(o_dir_Assets, oi))
+        shutil.copyfile("{0}{1}".format(o_dir, obj_tex_files[oi]), "{0}{1}".format(o_dir_Assets, obj_tex_files[oi]))
+        with open("{0}component-{1}.obj.meta".format(o_dir_Assets, oi), 'w+') as f:
+            f.write(makeOBJ(obj_guid))
+        with open("{0}{1}.meta".format(o_dir_Assets, obj_tex_files[oi]), 'w+') as f:
+            f.write(makeOBJTexMeta(obj_tex_guid))
+        with open("{0}comp-{1}.mat".format(o_dir_Assets, oi), 'w+') as f:
+            f.write(makeOBJTexMat(obj_tex_guid))
+        with open("{0}comp-{1}.mat.meta".format(o_dir_Assets, oi), 'w+') as f:
+            f.write(makeOBJTexMatMeta(obj_tex_mat_guid))
+    
+        obj_guids_used.append(obj_guid)
+        obj_local_ids_used.append(obj_local_id)
+        obj_positions.append([oi, oi, oi])
+
+        obj_tex_guids_used.append(obj_tex_guid)
+        obj_tex_mat_guids_used.append(obj_tex_mat_guid)
     with open("{0}empty.unity".format(o_dir_Assets), 'w+') as f:
-        f.write(makeScene())
+        f.write(makeScene(obj_guids_used, obj_local_ids_used, obj_positions, obj_tex_mat_guids_used))
 
     build_str = '\"{0}\" -quit -batchMode -executeMethod MyEditorScript.PerformBuild -projectPath {1}'.format(UNITY, o_dir_unity.replace('//', '/'))
     print(build_str)

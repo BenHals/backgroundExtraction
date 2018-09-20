@@ -10,6 +10,14 @@ import json
 import os
 import random
 
+def round_color(col, num_bins):
+    #print(col)
+    col_0 = math.floor(col[0] / num_bins) * num_bins
+    col_1 = math.floor(col[1] / num_bins) * num_bins
+    col_2 = math.floor(col[2] / num_bins) * num_bins
+    ret_col = np.array((col_0, col_1, col_2), np.uint8)
+    #print(ret_col)
+    return ret_col
 
 def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
     # Creates output directory
@@ -405,51 +413,49 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
 
         textured_bg = np.zeros((img_bigger.shape[0], img_bigger.shape[1], 3),np.uint8)
         color_pairs = {}
+        num_bins = 8
         for ri in range(y, y+h):
-            #print("extracting row {0}/{1}".format(ri, y+h))
             for ci in range(x, x+w):
-                num_bins = 8
-                #print(approxed_mask[1:-1,1:-1,np.newaxis][ri, ci])
-                if np.all(approxed_mask[1:-1,1:-1,np.newaxis][ri, ci] == 0):
+                if np.all(final_a[1:-1,1:-1,np.newaxis][ri, ci] == 0):
                     continue
-                #print(np.all(approxed_mask[1:-1,1:-1,np.newaxis][ri, ci] == 0))
-                pix_c0 = math.floor(final_a[ri, ci][0] / num_bins) * num_bins + round(((final_a[ri, ci][0] % num_bins)/num_bins))
-                pix_c1 = math.floor(final_a[ri, ci][1] / num_bins) * num_bins + round(((final_a[ri, ci][1] % num_bins)/num_bins))
-                pix_c2 = math.floor(final_a[ri, ci][2] / num_bins) * num_bins + round(((final_a[ri, ci][2] % num_bins)/num_bins))
+                rounded_pix = round_color(final_a[ri, ci], num_bins)
+                pix_str = str(rounded_pix.tolist())
+                if pix_str not in color_pairs:
+                    color_pairs[pix_str] = {}
+                    color_pairs[pix_str]['all'] = []
+                for n_y_offset in range(-1, 2):
+                    for n_x_offset in range(-1, 2):
+                        if n_y_offset == 0 and n_x_offset == 0:
+                            continue
+                        
+                        neighbor_row = ri + n_y_offset
+                        neighbor_col = ci + n_x_offset
 
-                neighbors = []
-                for ny in range(-1, 1):
-                    for nx in range(-1, 1):
-                        if nx == 0 and ny == 0:
+                        if neighbor_row < 0 or neighbor_row >= y + h:
                             continue
-                        n_ri = ri + ny
-                        n_ci = ci + nx
-                        if n_ri < 0 or n_ri >= final_a.shape[0]:
+                        if neighbor_col < 0 or neighbor_col >= x + w:
                             continue
-                        if n_ci < 0 or n_ci >= final_a.shape[1]:
+                        if np.all(final_a[1:-1,1:-1,np.newaxis][neighbor_row, neighbor_col] == 0):
                             continue
-                        n_c0 = math.floor(final_a[n_ri, n_ci][0] / num_bins) * num_bins + round(((final_a[n_ri, n_ci][0] % num_bins)/num_bins))
-                        n_c1 = math.floor(final_a[n_ri, n_ci][1] / num_bins) * num_bins + round(((final_a[n_ri, n_ci][1] % num_bins)/num_bins))
-                        n_c2 = math.floor(final_a[n_ri, n_ci][2] / num_bins) * num_bins + round(((final_a[n_ri, n_ci][2] % num_bins)/num_bins))
-                        neighbors.append((n_c0, n_c1, n_c2))
-                
-                pix = (pix_c0, pix_c1, pix_c2)
-                if pix not in color_pairs:
-                    color_pairs[pix] = {}
-                for n in neighbors:
-                    if n not in color_pairs[pix]:
-                        color_pairs[pix][n] = 0
-                    color_pairs[pix][n] += 1
+                        
+                        pix_from_neighbor_offset_y = n_y_offset * -1
+                        pix_from_neighbor_offset_x = n_x_offset * -1
+
+                        rounded_neighbor = round_color(final_a[neighbor_row, neighbor_col], num_bins)
+
+                        neighbor_str = str(rounded_neighbor.tolist())
+                        direction_str = str([pix_from_neighbor_offset_y, pix_from_neighbor_offset_x])
+
+                        if direction_str not in color_pairs[pix_str]:
+                            color_pairs[pix_str][direction_str] = []
+                        
+                        color_pairs[pix_str][direction_str].append(rounded_neighbor)
+                        color_pairs[pix_str]['all'].append(rounded_neighbor)
+               
         
-
-
-        # cv2.imshow('txtbg', cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-
         scaling_factor = math.floor(min(re_x/w, re_y/h) * 100)/100
         resized =cv2.resize(approxed_comp[y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
-        resized_mask = cv2.resize(approxed_mask[y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
+        resized_mask = cv2.resize(approxed_mask[1:-1, 1:-1][y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
         #resized_tex = cv2.resize(textured_bg[y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
         resized_x = resized.shape[1]
         resized_y = resized.shape[0]
@@ -458,15 +464,66 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
         x_offset = (re_x - resized_x)/2
         y_offset = (re_y - resized_y)/2
 
-        textured_bg[0, 0] = list(color_pairs.keys())[0]
+       
+
+        blank_64[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = resized
+        
+        textured_bg = textured_bg[0:re_y, 0:re_x]
+        textured_bg[0, 0] = np.array(json.loads(list(color_pairs.keys())[0]))
         for ri in range(0, re_y):
             for ci in range(0, re_x):
-                if not np.all(approxed_mask[1:-1,1:-1,np.newaxis][int(y_offset + ri)][int(x_offset+ci)] == 0):
+                if ri >= math.floor(y_offset) and ci >= math.floor(x_offset) and ri < math.floor(y_offset)+resized_y and ci < math.floor(x_offset)+resized_x and not np.all(resized_mask[:, :, np.newaxis][int(ri - y_offset), int(ci - x_offset)] == 0):
                     continue
-                textured_bg[ri, ci] = list(color_pairs.keys())[math.floor(random.random() * len(color_pairs))]
-        textured_bg = textured_bg[0:re_y, 0:re_x]
-        blank_64[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = resized
-        textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = resized
+                #possible_colors = [ c for c in list(color_pairs.keys())]
+                possible_colors = []
+                for n_y_offset in range(-1, 2):
+                    for n_x_offset in range(-1, 2):
+                        if n_y_offset == 0 and n_x_offset == 0:
+                            continue
+                        
+                        neighbor_row = ri + n_y_offset
+                        neighbor_col = ci + n_x_offset
+
+                        if neighbor_row < 0 or neighbor_row >= re_y:
+                            continue
+                        if neighbor_col < 0 or neighbor_col >= re_x:
+                            continue
+                        if neighbor_row >= math.floor(y_offset) and neighbor_col >= math.floor(x_offset) and neighbor_row < math.floor(y_offset)+resized_y and neighbor_col < math.floor(x_offset)+resized_x and not np.all(resized_mask[:, :, np.newaxis][int(neighbor_row - y_offset), int(neighbor_col - x_offset)] == 0):
+                            continue
+                        pix_from_neighbor_offset_y = n_y_offset * -1
+                        pix_from_neighbor_offset_x = n_x_offset * -1
+
+                        rounded_neighbor = round_color(textured_bg[neighbor_row, neighbor_col], num_bins)
+                        if np.all(rounded_neighbor == 0):
+                            continue
+                        neighbor_str = str(rounded_neighbor.tolist())
+                        direction_str = str([pix_from_neighbor_offset_y, pix_from_neighbor_offset_x])
+                        if neighbor_str not in color_pairs:
+                            print(neighbor_row, neighbor_col)
+                            test_pix = blank_64.copy()
+                            test_pix[neighbor_row, neighbor_col] = [75, 255, 255]
+                        elif direction_str in color_pairs[neighbor_str]:
+                            possibilities = [ c for c in color_pairs[neighbor_str][direction_str]]
+                            possible_colors += possibilities
+
+                if len(possible_colors) == 0:
+                    print('oh no')
+                    possible_colors += [ c for c in list(color_pairs.keys())]
+                rand_col_index = np.random.randint(0, len(possible_colors))
+                rand_col = possible_colors[rand_col_index]
+                #print(rand_col)
+                if isinstance(rand_col, str):  
+                    rand_col = np.array(json.loads(rand_col))
+                textured_bg[ri, ci] = rand_col
+
+        #cv2.destroyAllWindows()
+        #cv2.imshow('test', cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
+        #cv2.imshow('testpix', cv2.cvtColor(test_pix, cv2.COLOR_HSV2BGR))
+        #cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+        textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] + resized*resized_mask[:, :, np.newaxis]
+        
+        
         cv2.rectangle(img_contour_indi,(x,y),(x+w,y+h),(75,160,255),2)
         if cv2.arcLength(a,True) > 5:
 

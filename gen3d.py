@@ -13,34 +13,30 @@ from os import listdir
 from os.path import isfile, join
 
 def make_cube(l):
-    output_str = ""
-    verts = [   (0, 0, 0),
-                (0, 1*l, 0),
-                (1*l, 0, 0),
-                (1*l, 1*l, 0),
-                (0, 0, 1*l),
-                (0, 1*l, 1*l),
-                (1*l, 0, 1*l),
-                (1*l, 1*l, 1*l),
-            ]
-    faces = [
-        (1, 2, 3),   
-        (2, 4, 3),   
-        (2, 6, 8),   
-        (2, 8, 4),   
-        (4, 8 ,3),   
-        (8, 7, 3),   
-        (6, 5, 8),   
-        (5, 7, 8),   
-        (5, 1, 7),   
-        (1, 3, 7),   
-        (6, 2, 1),   
-        (6, 1, 5),   
-    ]
-    for i,v in enumerate(verts):
-        output_str += "v {0} {1} {2}\n".format(v[0], v[1], v[2])
-    for i,f in enumerate(faces):
-        output_str += "f {0} {1} {2}\n".format(f[0], f[1], f[2])
+    output_str = """v 0 0 0
+v 0 1 0
+v 1 0 0
+v 1 1 0
+v 0 0 1
+v 0 1 1
+v 1 0 1
+v 1 1 1
+vt 0 0
+vt 0 1
+vt 1 0
+vt 1 1
+f 1/1 2/2 3/3
+f 2/2 4/4 3/3
+f 2/1 6/2 8/4
+f 2/1 8/4 4/3
+f 4/2 8/4 3/1
+f 8/4 7/3 3/1
+f 6/2 5/1 8/4
+f 5/1 7/3 8/4
+f 5/1 1/2 7/3
+f 1/2 3/1 7/3
+f 6/1 2/2 1/3
+f 6/1 1/2 5/4"""
     return output_str
 
 def gen_3d(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI, SBSIZE):
