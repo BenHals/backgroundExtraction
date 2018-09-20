@@ -8,6 +8,7 @@ from skimage.color import rgb2gray
 import argparse
 import json
 import os
+import random
 
 
 def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
@@ -386,6 +387,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
     re_y = 250
 
     for i,a in enumerate(approxes):
+        print("component {0}/{1}".format(i, len(approxes)))
         img_contour_indi = img_bigger.copy()
         cnt = a
         cv2.drawContours(img_contour_indi, [cnt], 0, (0,255,255), 3)
@@ -396,21 +398,81 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
         final_a = img_bigger*approxed_mask[1:-1,1:-1,np.newaxis]
         blank = np.zeros((img_bigger.shape[0], img_bigger.shape[1], 3),np.uint8)
         blank[:, :] = (180, 0, 255)
+
+
         approxed_comp = blank*approxed_mask_inv[1:-1,1:-1,np.newaxis] + final_a
         x,y,w,h = cv2.boundingRect(approxed_mask)
+
+        textured_bg = np.zeros((img_bigger.shape[0], img_bigger.shape[1], 3),np.uint8)
+        color_pairs = {}
+        for ri in range(y, y+h):
+            #print("extracting row {0}/{1}".format(ri, y+h))
+            for ci in range(x, x+w):
+                num_bins = 8
+                #print(approxed_mask[1:-1,1:-1,np.newaxis][ri, ci])
+                if np.all(approxed_mask[1:-1,1:-1,np.newaxis][ri, ci] == 0):
+                    continue
+                #print(np.all(approxed_mask[1:-1,1:-1,np.newaxis][ri, ci] == 0))
+                pix_c0 = math.floor(final_a[ri, ci][0] / num_bins) * num_bins + round(((final_a[ri, ci][0] % num_bins)/num_bins))
+                pix_c1 = math.floor(final_a[ri, ci][1] / num_bins) * num_bins + round(((final_a[ri, ci][1] % num_bins)/num_bins))
+                pix_c2 = math.floor(final_a[ri, ci][2] / num_bins) * num_bins + round(((final_a[ri, ci][2] % num_bins)/num_bins))
+
+                neighbors = []
+                for ny in range(-1, 1):
+                    for nx in range(-1, 1):
+                        if nx == 0 and ny == 0:
+                            continue
+                        n_ri = ri + ny
+                        n_ci = ci + nx
+                        if n_ri < 0 or n_ri >= final_a.shape[0]:
+                            continue
+                        if n_ci < 0 or n_ci >= final_a.shape[1]:
+                            continue
+                        n_c0 = math.floor(final_a[n_ri, n_ci][0] / num_bins) * num_bins + round(((final_a[n_ri, n_ci][0] % num_bins)/num_bins))
+                        n_c1 = math.floor(final_a[n_ri, n_ci][1] / num_bins) * num_bins + round(((final_a[n_ri, n_ci][1] % num_bins)/num_bins))
+                        n_c2 = math.floor(final_a[n_ri, n_ci][2] / num_bins) * num_bins + round(((final_a[n_ri, n_ci][2] % num_bins)/num_bins))
+                        neighbors.append((n_c0, n_c1, n_c2))
+                
+                pix = (pix_c0, pix_c1, pix_c2)
+                if pix not in color_pairs:
+                    color_pairs[pix] = {}
+                for n in neighbors:
+                    if n not in color_pairs[pix]:
+                        color_pairs[pix][n] = 0
+                    color_pairs[pix][n] += 1
+        
+
+
+        # cv2.imshow('txtbg', cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
         scaling_factor = math.floor(min(re_x/w, re_y/h) * 100)/100
         resized =cv2.resize(approxed_comp[y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
+        resized_mask = cv2.resize(approxed_mask[y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
+        #resized_tex = cv2.resize(textured_bg[y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
         resized_x = resized.shape[1]
         resized_y = resized.shape[0]
         blank_64 = np.zeros((re_x, re_y, 3),np.uint8)
         blank_64[:, :] = (180, 0, 255)
         x_offset = (re_x - resized_x)/2
         y_offset = (re_y - resized_y)/2
+
+        textured_bg[0, 0] = list(color_pairs.keys())[0]
+        for ri in range(0, re_y):
+            for ci in range(0, re_x):
+                if not np.all(approxed_mask[1:-1,1:-1,np.newaxis][int(y_offset + ri)][int(x_offset+ci)] == 0):
+                    continue
+                textured_bg[ri, ci] = list(color_pairs.keys())[math.floor(random.random() * len(color_pairs))]
+        textured_bg = textured_bg[0:re_y, 0:re_x]
         blank_64[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = resized
+        textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = resized
         cv2.rectangle(img_contour_indi,(x,y),(x+w,y+h),(75,160,255),2)
         if cv2.arcLength(a,True) > 5:
 
-            cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}.png'.format(o_dir, i, w, h, scaling_factor), cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
+            cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-img.png'.format(o_dir, i, w, h, scaling_factor), cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
+            cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-mask.png'.format(o_dir, i, w, h, scaling_factor), resized_mask*255)
+            cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-tex.png'.format(o_dir, i, w, h, scaling_factor), cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
             if DETAIL:
                 cv2.imshow('con-approx', cv2.cvtColor(img_contour_indi, cv2.COLOR_HSV2BGR))
                 cv2.imshow('components', cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
