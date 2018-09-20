@@ -414,11 +414,12 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
         textured_bg = np.zeros((img_bigger.shape[0], img_bigger.shape[1], 3),np.uint8)
         color_pairs = {}
         num_bins = 8
-        for ri in range(y, y+h):
-            for ci in range(x, x+w):
-                if np.all(final_a[1:-1,1:-1,np.newaxis][ri, ci] == 0):
+        for ri in range(y, min(y+h, final_a[1:-1, 1:-1].shape[0])):
+            for ci in range(x, min(x+w, final_a[1:-1, 1:-1].shape[1])):
+                print("{0}:{1} {2}".format(x, min(x+w, final_a[1:-1, 1:-1].shape[1]), final_a.shape[1]))
+                if np.all(final_a[ri, ci] == 0):
                     continue
-                rounded_pix = round_color(final_a[ri, ci], num_bins)
+                rounded_pix = round_color(final_a[1:-1, 1:-1][ri, ci], num_bins)
                 pix_str = str(rounded_pix.tolist())
                 if pix_str not in color_pairs:
                     color_pairs[pix_str] = {}
@@ -431,11 +432,11 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                         neighbor_row = ri + n_y_offset
                         neighbor_col = ci + n_x_offset
 
-                        if neighbor_row < 0 or neighbor_row >= y + h:
+                        if neighbor_row < 0 or neighbor_row >= min(y+h, final_a[1:-1, 1:-1].shape[0]):
                             continue
-                        if neighbor_col < 0 or neighbor_col >= x + w:
+                        if neighbor_col < 0 or neighbor_col >= min(x+w, final_a[1:-1, 1:-1].shape[1]):
                             continue
-                        if np.all(final_a[1:-1,1:-1,np.newaxis][neighbor_row, neighbor_col] == 0):
+                        if np.all(final_a[neighbor_row, neighbor_col] == 0):
                             continue
                         
                         pix_from_neighbor_offset_y = n_y_offset * -1
