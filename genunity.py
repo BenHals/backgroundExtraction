@@ -651,10 +651,13 @@ TextureImporter:
   assetBundleName: 
   assetBundleVariant: 
 """
-def makeScene(guids, locals, positions, tex_mat_guids):
+def makeScene(guids, locals, positions, scales, tex_mat_guids):
     obj_str = """"""
+    extra = 0
     for i,guid in enumerate(guids):
-        obj_str += """--- !u!1001 &"""+str(locals[i])+"""
+        for x in range(0, math.floor(random.random() * 100)):
+            extra += 1
+            obj_str += """--- !u!1001 &"""+str(locals[i] + extra)+"""
 Prefab:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -663,27 +666,39 @@ Prefab:
     m_Modifications:
     - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
       propertyPath: m_LocalPosition.x
-      value: """+str(positions[i][0])+"""
+      value: """+str(random.random() * 600 - 300)+"""
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
       propertyPath: m_LocalPosition.y
-      value: """+str(positions[i][1])+"""
+      value: """+str(random.random() * 600 - 300)+"""
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
       propertyPath: m_LocalPosition.z
-      value: """+str(positions[i][2])+"""
+      value: """+str(random.random() * 600 - 300)+"""
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalScale.x
+      value: """+str(scales[i] * random.random()*3)+"""
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalScale.y
+      value: """+str(scales[i]  * random.random()*3)+"""
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
+      propertyPath: m_LocalScale.z
+      value: """+str(1)+"""
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: """ + str(random.random() * 180) + """
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: -""" + str(random.random() * 180) + """
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: -""" + str(random.random() * 180) + """
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: """+str(guid)+""", type: 3}
       propertyPath: m_LocalRotation.w
@@ -726,7 +741,7 @@ RenderSettings:
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
-  m_AmbientIntensity: 1
+  m_AmbientIntensity: 0.7
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
   m_SkyboxMaterial: {fileID: 2100000, guid: 22222222222222222222222222222222, type: 2}
@@ -1016,21 +1031,23 @@ def gen_unity(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI, SBSIZE, UNI
     obj_tex_mat_guids_used = []
     obj_local_ids_used = []
     obj_positions = []
+    obj_scales = []
     obj_files = [f for f in listdir(o_dir) if isfile(join(o_dir, f)) and 'component' in f and 'obj' in f]
     obj_files.sort(key=natural_keys)
     obj_tex_files = [f for f in listdir(o_dir) if isfile(join(o_dir, f)) and 'conponent' in f and 'tex.png' in f]
     obj_tex_files.sort(key=natural_keys)
     print(obj_tex_files)
-    for oi in range(0, len(obj_files)):
+    for oi_i,oi_file in enumerate(obj_files):
+        oi = int(oi_file.split('.')[0].split('-')[1])
         obj_guid = base_obj_guid + oi
         obj_local_id = base_obj_local_id + oi
         obj_tex_guid = base_obj_tex_guid + oi
         obj_tex_mat_guid = base_obj_tex_mat_guid + oi
         shutil.copyfile("{0}component-{1}.obj".format(o_dir, oi), "{0}component-{1}.obj".format(o_dir_Assets, oi))
-        shutil.copyfile("{0}{1}".format(o_dir, obj_tex_files[oi]), "{0}{1}".format(o_dir_Assets, obj_tex_files[oi]))
+        shutil.copyfile("{0}{1}".format(o_dir, obj_tex_files[oi_i]), "{0}{1}".format(o_dir_Assets, obj_tex_files[oi_i]))
         with open("{0}component-{1}.obj.meta".format(o_dir_Assets, oi), 'w+') as f:
             f.write(makeOBJ(obj_guid))
-        with open("{0}{1}.meta".format(o_dir_Assets, obj_tex_files[oi]), 'w+') as f:
+        with open("{0}{1}.meta".format(o_dir_Assets, obj_tex_files[oi_i]), 'w+') as f:
             f.write(makeOBJTexMeta(obj_tex_guid))
         with open("{0}comp-{1}.mat".format(o_dir_Assets, oi), 'w+') as f:
             f.write(makeOBJTexMat(obj_tex_guid))
@@ -1039,12 +1056,13 @@ def gen_unity(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI, SBSIZE, UNI
     
         obj_guids_used.append(obj_guid)
         obj_local_ids_used.append(obj_local_id)
-        obj_positions.append([oi, oi, oi])
+        obj_positions.append([oi*10, oi*10, oi])
+        obj_scales.append( 1 / float(obj_tex_files[oi_i].split('-')[4]))
 
         obj_tex_guids_used.append(obj_tex_guid)
         obj_tex_mat_guids_used.append(obj_tex_mat_guid)
     with open("{0}empty.unity".format(o_dir_Assets), 'w+') as f:
-        f.write(makeScene(obj_guids_used, obj_local_ids_used, obj_positions, obj_tex_mat_guids_used))
+        f.write(makeScene(obj_guids_used, obj_local_ids_used, obj_positions, obj_scales, obj_tex_mat_guids_used))
 
     build_str = '\"{0}\" -quit -batchMode -executeMethod MyEditorScript.PerformBuild -projectPath {1}'.format(UNITY, o_dir_unity.replace('//', '/'))
     print(build_str)
@@ -1068,6 +1086,7 @@ if __name__ == "__main__":
                         nargs='?', default='miro')
     parser.add_argument("--unity", help="enter some quality limit",
                         nargs='?', default='D:/PROGFILES/unity/Editor/Unity.exe')
+                        # nargs='?', default='D:/programs/unity/Editor/Unity.exe')
     parser.add_argument("--detail", help="enter some quality limit", action='store_true', default=False)
     parser.add_argument("--sbsize", type=float, default=512)
     args = parser.parse_args()

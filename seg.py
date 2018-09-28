@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import random
+import contour_obj
 
 def round_color(col, num_bins):
     #print(col)
@@ -78,6 +79,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                 r = (col+1) * BLOCK_SIZE
                 cv2.rectangle(init_rects, (l+1, t+1), (r-1, b-1), (100, 255, 255), 1)
         cv2.imshow('window segmentation', cv2.cvtColor(init_rects, cv2.COLOR_HSV2BGR))
+        cv2.imwrite('windows.png', cv2.cvtColor(init_rects, cv2.COLOR_HSV2BGR))
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -160,6 +162,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
 
     if DETAIL:
         cv2.imshow('post init segmentation', cv2.cvtColor(img_rect_pre_merge, cv2.COLOR_HSV2BGR))
+        cv2.imwrite('windowGroups.png', cv2.cvtColor(img_rect_pre_merge, cv2.COLOR_HSV2BGR))
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -298,6 +301,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
 
 
     std_multi = (1 + (1 - ((BLOCK_SIZE * 21)/ img_bigger.shape[1]))) * MULTI
+    shown_windows = 0
     for c_1_m in range(10, 11):
         for c_2_m in range(8, 9):  
             for c_3_m in range(9, 10):
@@ -333,7 +337,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                     print(std_multi)
                     # Floodfill sets mask to 255 where background is
                     cv2.floodFill(img_bigger ,mask, point, 255, (c1_std * c1_thresh, c2_std * c2_thresh, c3_std * c3_thresh), (c1_std * c1_thresh, c2_std * c2_thresh, c3_std * c3_thresh), floodflags)     # line 27
-                    if DETAIL:
+                    if DETAIL and shown_windows < 5:
                         img_show_rect = img_rect.copy()
                         cv2.rectangle(img_show_rect, (l, t), (r, b), (50, 255, 255), 1)
                         
@@ -344,6 +348,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                         cv2.imshow('rect', cv2.cvtColor(img_show_rect, cv2.COLOR_HSV2BGR))
                         cv2.waitKey(0)
                         cv2.destroyAllWindows()
+                        shown_windows += 1
                     cv2.line(img_rect,(point[0] - 5,point[1]),(point[0] + 5,point[1]),(255,0,0),1)
                     cv2.line(img_rect,(point[0],point[1] - 5),(point[0],point[1] + 5),(255,0,0),1)
                 
@@ -383,7 +388,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
     for c in contours:
         cx,cy,cw,ch = cv2.boundingRect(c)
         if cv2.arcLength(c,True) > 50 and cv2.contourArea(c) < 0.75 * max_area:
-            epsilon = 2
+            epsilon = 6
             approx = cv2.approxPolyDP(c,epsilon,True)
             approxes.append(approx)
 
@@ -391,8 +396,8 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
     # Crop components to seperate images
     img_contour_indi = img_bigger.copy()
 
-    re_x = 250
-    re_y = 250
+    re_x = 64
+    re_y = 64
 
     for i,a in enumerate(approxes):
         print("component {0}/{1}".format(i, len(approxes)))
@@ -400,6 +405,8 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
         cnt = a
         cv2.drawContours(img_contour_indi, [cnt], 0, (0,255,255), 3)
         
+
+
         approxed_mask = np.zeros((img_bigger.shape[0]+2, img_bigger.shape[1]+2),np.uint8)
         cv2.fillPoly(approxed_mask, pts=[a], color = (1))
         approxed_mask_inv = np.where((approxed_mask==1), 0, 1).astype('uint8')
@@ -416,7 +423,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
         num_bins = 8
         for ri in range(y, min(y+h, final_a[1:-1, 1:-1].shape[0])):
             for ci in range(x, min(x+w, final_a[1:-1, 1:-1].shape[1])):
-                print("{0}:{1} {2}".format(x, min(x+w, final_a[1:-1, 1:-1].shape[1]), final_a.shape[1]))
+                #print("{0}:{1} {2}".format(x, min(x+w, final_a[1:-1, 1:-1].shape[1]), final_a.shape[1]))
                 if np.all(final_a[ri, ci] == 0):
                     continue
                 rounded_pix = round_color(final_a[1:-1, 1:-1][ri, ci], num_bins)
@@ -454,7 +461,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                         color_pairs[pix_str]['all'].append(rounded_neighbor)
                
         
-        scaling_factor = math.floor(min(re_x/w, re_y/h) * 100)/100
+        scaling_factor = math.floor(min(re_x/w*0.6, re_y/h*0.6) * 100)/100
         resized =cv2.resize(approxed_comp[y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
         resized_mask = cv2.resize(approxed_mask[1:-1, 1:-1][y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
         #resized_tex = cv2.resize(textured_bg[y:y+h, x:x+w], (int(w*scaling_factor), int(h*scaling_factor)), interpolation=cv2.INTER_AREA)
@@ -465,7 +472,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
         x_offset = (re_x - resized_x)/2
         y_offset = (re_y - resized_y)/2
 
-       
+
 
         blank_64[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = resized
         
@@ -500,7 +507,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                         neighbor_str = str(rounded_neighbor.tolist())
                         direction_str = str([pix_from_neighbor_offset_y, pix_from_neighbor_offset_x])
                         if neighbor_str not in color_pairs:
-                            print(neighbor_row, neighbor_col)
+                            #print(neighbor_row, neighbor_col)
                             test_pix = blank_64.copy()
                             test_pix[neighbor_row, neighbor_col] = [75, 255, 255]
                         elif direction_str in color_pairs[neighbor_str]:
@@ -508,7 +515,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                             possible_colors += possibilities
 
                 if len(possible_colors) == 0:
-                    print('oh no')
+                    #print('oh no')
                     possible_colors += [ c for c in list(color_pairs.keys())]
                 rand_col_index = np.random.randint(0, len(possible_colors))
                 rand_col = possible_colors[rand_col_index]
@@ -516,6 +523,8 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                 if isinstance(rand_col, str):  
                     rand_col = np.array(json.loads(rand_col))
                 textured_bg[ri, ci] = rand_col
+            
+
 
         #cv2.destroyAllWindows()
         #cv2.imshow('test', cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
@@ -524,16 +533,52 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
         # cv2.destroyAllWindows()
         textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] + resized*resized_mask[:, :, np.newaxis]
         
-        
+        print('making 3d')
+        contour_points = []
+        last_point = None
+        for point in a:
+            new_point = [int(((point[0][0] - x) * scaling_factor + x_offset)*1), int((((point[0][1]- y)*scaling_factor + y_offset))*1)*-1]
+            if new_point == last_point or (last_point != None and np.linalg.norm(np.array(new_point) - np.array(last_point)) < 2):
+                continue
+            else:
+                last_point = new_point
+            contour_points.append(new_point)
+        if(len(contour_points) < 3):
+            
+            cv2.imshow('con-approx', cv2.cvtColor(img_contour_indi, cv2.COLOR_HSV2BGR))
+            cv2.imshow('components', cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
+            cv2.imshow('tex', cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
+            #cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            continue
+        contour_points.reverse()
+        obj_str = contour_obj.obj_triang(contour_points, re_x, re_y)
+
+        with open('{0}component-{1}.obj'.format(o_dir, i), 'w+') as wf:
+            wf.write(obj_str)
+
         cv2.rectangle(img_contour_indi,(x,y),(x+w,y+h),(75,160,255),2)
         if cv2.arcLength(a,True) > 5:
 
-            cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-img.png'.format(o_dir, i, w, h, scaling_factor), cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
+            blank_alpha = cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR)
+            blank_alpha = cv2.cvtColor(blank_alpha, cv2.COLOR_BGR2BGRA)
+            for r,row in enumerate(blank_alpha):
+                for c,col in enumerate(blank_alpha):
+                    if blank_alpha[r][c][0] == 180 and blank_alpha[r][c][1] == 0 and blank_alpha[r][c][2] == 255:
+                        blank_alpha[r][c][3] = 0
+                    else:
+                        print(blank_alpha[r][c])
+                        blank_alpha[r][c][3] = 255
+                        print(blank_alpha[r][c])
+
+            print(blank_alpha.shape)
+            cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-img.png'.format(o_dir, i, w, h, scaling_factor), blank_alpha)
             cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-mask.png'.format(o_dir, i, w, h, scaling_factor), resized_mask*255)
             cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-tex.png'.format(o_dir, i, w, h, scaling_factor), cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
             if DETAIL:
                 cv2.imshow('con-approx', cv2.cvtColor(img_contour_indi, cv2.COLOR_HSV2BGR))
                 cv2.imshow('components', cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
+                cv2.imshow('tex', cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
 
