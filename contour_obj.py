@@ -62,13 +62,18 @@ def obj_triang(contour_points, re_x, re_y):
         f = f.tolist()
         f.reverse()
         obj_str += "f {0}/{0} {1}/{1} {2}/{2}\n".format(f[0]+1+len(contour_points), f[1]+1+len(contour_points), f[2]+1+len(contour_points))
+    
     for pi in range(1, len(contour_points)):
         first_point = pi
+        obj_str += "vt {0} {1}\n".format(1/len(contour_points) * (pi - 1), 0)
         second_point = pi + 1
+        obj_str += "vt {0} {1}\n".format(1/len(contour_points) * (pi), 0)
         third_point = second_point + len(contour_points)
+        obj_str += "vt {0} {1}\n".format(1/len(contour_points) * (pi - 1), 0.2)
         fourth_point = first_point + len(contour_points)
-        obj_str += "f {0}/{0} {1}/{1} {2}/{2}\n".format(third_point, second_point, first_point)
-        obj_str += "f {0}/{0} {1}/{1} {2}/{2}\n".format(fourth_point, third_point, first_point)
+        obj_str += "vt {0} {1}\n".format(1/len(contour_points) * (pi), 0.2)
+        obj_str += "f {0}/{3} {1}/{4} {2}/{5}\n".format(third_point, second_point, first_point, len(contour_points)*2 + 3, len(contour_points)*2 + 2, len(contour_points)*2 +1)
+        obj_str += "f {0}/{3} {1}/{4} {2}/{5}\n".format(fourth_point, third_point, first_point, len(contour_points)*2 + 4, len(contour_points)*2 + 3, len(contour_points)*2 +1)
     first_point = len(contour_points)
     second_point = 1
     third_point = second_point + len(contour_points)

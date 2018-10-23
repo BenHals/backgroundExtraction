@@ -655,7 +655,7 @@ def makeScene(guids, locals, positions, scales, tex_mat_guids):
     obj_str = """"""
     extra = 0
     for i,guid in enumerate(guids):
-        for x in range(0, math.floor(random.random() * 100)):
+        for x in range(0, math.floor(random.random() * 10)):
             extra += 1
             obj_str += """--- !u!1001 &"""+str(locals[i] + extra)+"""
 Prefab:

@@ -66,6 +66,8 @@ def create_bg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI, SBSIZE):
                     mins_winds.append(wind)
 
             print(len(mins_winds))
+            if(len(mins_winds) < 1):
+                mins_winds = windows
             reroll = random.random()
             picked_wind_index = math.floor(random.random() * len(mins_winds))
             while reroll < picked_wind_index/len(min_wind):

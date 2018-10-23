@@ -396,8 +396,8 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
     # Crop components to seperate images
     img_contour_indi = img_bigger.copy()
 
-    re_x = 64
-    re_y = 64
+    re_x = 256
+    re_y = 256
 
     for i,a in enumerate(approxes):
         print("component {0}/{1}".format(i, len(approxes)))
@@ -420,10 +420,11 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
 
         textured_bg = np.zeros((img_bigger.shape[0], img_bigger.shape[1], 3),np.uint8)
         color_pairs = {}
-        num_bins = 8
+        num_bins = 4
         for ri in range(y, min(y+h, final_a[1:-1, 1:-1].shape[0])):
             for ci in range(x, min(x+w, final_a[1:-1, 1:-1].shape[1])):
                 #print("{0}:{1} {2}".format(x, min(x+w, final_a[1:-1, 1:-1].shape[1]), final_a.shape[1]))
+                print("finding neighbors {0}\{1} \r".format(y*x + x, min(y+h, final_a[1:-1, 1:-1].shape[0]) * min(x+w, final_a[1:-1, 1:-1].shape[1])), end="", flush=True)
                 if np.all(final_a[ri, ci] == 0):
                     continue
                 rounded_pix = round_color(final_a[1:-1, 1:-1][ri, ci], num_bins)
@@ -480,6 +481,7 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
         textured_bg[0, 0] = np.array(json.loads(list(color_pairs.keys())[0]))
         for ri in range(0, re_y):
             for ci in range(0, re_x):
+                print("making tex {0}\{1} \r".format(ri * re_x + ci, re_y * re_x), end="", flush=True)
                 if ri >= math.floor(y_offset) and ci >= math.floor(x_offset) and ri < math.floor(y_offset)+resized_y and ci < math.floor(x_offset)+resized_x and not np.all(resized_mask[:, :, np.newaxis][int(ri - y_offset), int(ci - x_offset)] == 0):
                     continue
                 #possible_colors = [ c for c in list(color_pairs.keys())]
@@ -500,8 +502,10 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                             continue
                         pix_from_neighbor_offset_y = n_y_offset * -1
                         pix_from_neighbor_offset_x = n_x_offset * -1
-
-                        rounded_neighbor = round_color(textured_bg[neighbor_row, neighbor_col], num_bins)
+                        try:
+                            rounded_neighbor = round_color(textured_bg[neighbor_row, neighbor_col], num_bins)
+                        except:
+                            continue
                         if np.all(rounded_neighbor == 0):
                             continue
                         neighbor_str = str(rounded_neighbor.tolist())
@@ -522,7 +526,10 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
                 #print(rand_col)
                 if isinstance(rand_col, str):  
                     rand_col = np.array(json.loads(rand_col))
-                textured_bg[ri, ci] = rand_col
+                try:
+                    textured_bg[ri, ci] = rand_col
+                except:
+                    continue
             
 
 
@@ -531,8 +538,10 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
         #cv2.imshow('testpix', cv2.cvtColor(test_pix, cv2.COLOR_HSV2BGR))
         #cv2.waitKey(0)
         # cv2.destroyAllWindows()
-        textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] + resized*resized_mask[:, :, np.newaxis]
-        
+        try:
+            textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] = textured_bg[math.floor(y_offset):math.floor(y_offset)+resized_y, math.floor(x_offset):math.floor(x_offset)+resized_x] + resized*resized_mask[:, :, np.newaxis]
+        except:
+            continue
         print('making 3d')
         contour_points = []
         last_point = None
@@ -552,35 +561,38 @@ def seg(BLOCK_SIZE, COLTHRESH, TEXTHRESH, FILE, DETAIL, MULTI):
             cv2.destroyAllWindows()
             continue
         contour_points.reverse()
-        obj_str = contour_obj.obj_triang(contour_points, re_x, re_y)
+        try:
+            obj_str = contour_obj.obj_triang(contour_points, re_x, re_y)
 
-        with open('{0}component-{1}.obj'.format(o_dir, i), 'w+') as wf:
-            wf.write(obj_str)
+            with open('{0}component-{1}.obj'.format(o_dir, i), 'w+') as wf:
+                wf.write(obj_str)
 
-        cv2.rectangle(img_contour_indi,(x,y),(x+w,y+h),(75,160,255),2)
-        if cv2.arcLength(a,True) > 5:
+            cv2.rectangle(img_contour_indi,(x,y),(x+w,y+h),(75,160,255),2)
+            if cv2.arcLength(a,True) > 5:
 
-            blank_alpha = cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR)
-            blank_alpha = cv2.cvtColor(blank_alpha, cv2.COLOR_BGR2BGRA)
-            for r,row in enumerate(blank_alpha):
-                for c,col in enumerate(blank_alpha):
-                    if blank_alpha[r][c][0] == 180 and blank_alpha[r][c][1] == 0 and blank_alpha[r][c][2] == 255:
-                        blank_alpha[r][c][3] = 0
-                    else:
-                        print(blank_alpha[r][c])
-                        blank_alpha[r][c][3] = 255
-                        print(blank_alpha[r][c])
+                blank_alpha = cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR)
+                blank_alpha = cv2.cvtColor(blank_alpha, cv2.COLOR_BGR2BGRA)
+                for r,row in enumerate(blank_alpha):
+                    for c,col in enumerate(blank_alpha):
+                        if blank_alpha[r][c][0] == 180 and blank_alpha[r][c][1] == 0 and blank_alpha[r][c][2] == 255:
+                            blank_alpha[r][c][3] = 0
+                        else:
+                            print(blank_alpha[r][c])
+                            blank_alpha[r][c][3] = 255
+                            print(blank_alpha[r][c])
 
-            print(blank_alpha.shape)
-            cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-img.png'.format(o_dir, i, w, h, scaling_factor), blank_alpha)
-            cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-mask.png'.format(o_dir, i, w, h, scaling_factor), resized_mask*255)
-            cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-tex.png'.format(o_dir, i, w, h, scaling_factor), cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
-            if DETAIL:
-                cv2.imshow('con-approx', cv2.cvtColor(img_contour_indi, cv2.COLOR_HSV2BGR))
-                cv2.imshow('components', cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
-                cv2.imshow('tex', cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                print(blank_alpha.shape)
+                cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-img.png'.format(o_dir, i, w, h, scaling_factor), blank_alpha)
+                cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-mask.png'.format(o_dir, i, w, h, scaling_factor), resized_mask*255)
+                cv2.imwrite('{0}conponent-{1}-{2}-{3}-{4}-tex.png'.format(o_dir, i, w, h, scaling_factor), cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
+                if DETAIL:
+                    cv2.imshow('con-approx', cv2.cvtColor(img_contour_indi, cv2.COLOR_HSV2BGR))
+                    cv2.imshow('components', cv2.cvtColor(blank_64, cv2.COLOR_HSV2BGR))
+                    cv2.imshow('tex', cv2.cvtColor(textured_bg, cv2.COLOR_HSV2BGR))
+                    cv2.waitKey(0)
+                    cv2.destroyAllWindows()
+        except:
+            print("making 3d failed")
 
 
 
